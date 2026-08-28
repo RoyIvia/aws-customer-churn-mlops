@@ -1,6 +1,6 @@
                          ┌──────────────────────┐
-                         │     Data Source      │
-                         │ Customer Data        │
+                         │      Data Source     │
+                         │    Customer Data     │
                          └──────────┬───────────┘
                                     │
                                     ▼
