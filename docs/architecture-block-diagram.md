@@ -17,7 +17,7 @@
                                     │
                                     ▼
                          ┌──────────────────────┐
-                         │ Feature Engineering │
+                         │ Feature Engineering  │
                          └──────────┬───────────┘
                                     │
                                     ▼
