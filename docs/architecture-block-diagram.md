@@ -32,8 +32,8 @@
                          │                      │
                          │ Processing           │
                          │ Training             │
-                         │ Evaluation            │
-                         │ Quality Gate          │
+                         │ Evaluation           │
+                         │ Quality Gate         │
                          └──────────┬───────────┘
                                     │
                                     ▼
