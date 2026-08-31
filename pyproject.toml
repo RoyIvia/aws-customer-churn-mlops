@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aws-customer-churn-mlops"
+version = "0.1.0"
+description = "Production-oriented customer churn MLOps project on AWS"
+requires-python = ">=3.12,<3.13"
+
+[tool.setuptools.packages.find]
+include = ["src*"]
