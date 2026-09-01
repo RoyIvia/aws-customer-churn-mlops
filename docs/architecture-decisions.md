@@ -57,7 +57,7 @@ Negative:
 - SageMaker-specific operational knowledge required
 - Potential cost if resources are left running
 
----
+
 
 ## ADR-002: Use XGBoost as the Primary Production Candidate
 
