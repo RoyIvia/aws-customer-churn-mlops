@@ -72,7 +72,7 @@ ProcessingOutput(
 )
 
 The s3_upload_mode parameter belongs inside ProcessingS3Output, while local_path belongs inside ProcessingOutput.
-
+```
 ### 3. Pipeline quality gates
 
 The pipeline evaluates the model using a SageMaker Processing step that produces an evaluation.json property file.
