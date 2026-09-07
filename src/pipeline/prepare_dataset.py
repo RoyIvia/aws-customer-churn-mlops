@@ -1,6 +1,7 @@
 """Prepare leakage-safe train, validation, and test datasets."""
 
 from pathlib import Path
+import argparse
 
 import joblib
 import pandas as pd
@@ -55,12 +56,16 @@ def transform_split(
     return result
 
 
-def prepare_dataset() -> None:
+def prepare_dataset(
+    raw_dataset: Path = RAW_DATASET,
+    processed_dir: Path = PROCESSED_DIR,
+    preprocessor_path: Path = PREPROCESSOR_PATH,
+) -> None:
     """Validate, split, transform, and persist the dataset."""
 
     print("==> Loading and validating raw dataset...")
 
-    raw_df = validate_dataset(RAW_DATASET)
+    raw_df = validate_dataset(raw_dataset)
 
     print(f"    ✓ {len(raw_df):,} records validated")
 
@@ -89,10 +94,7 @@ def prepare_dataset() -> None:
         fit=True,
     )
 
-    print(
-        f"    ✓ Training transformed: "
-        f"{train_output.shape}"
-    )
+    print(f"    ✓ Training transformed: {train_output.shape}")
 
     print()
     print("==> Transforming validation data...")
@@ -103,10 +105,7 @@ def prepare_dataset() -> None:
         fit=False,
     )
 
-    print(
-        f"    ✓ Validation transformed: "
-        f"{validation_output.shape}"
-    )
+    print(f"    ✓ Validation transformed: {validation_output.shape}")
 
     print()
     print("==> Transforming test data...")
@@ -117,10 +116,7 @@ def prepare_dataset() -> None:
         fit=False,
     )
 
-    print(
-        f"    ✓ Test transformed: "
-        f"{test_output.shape}"
-    )
+    print(f"    ✓ Test transformed: {test_output.shape}")
 
     print()
     print("==> Persisting processed datasets...")
@@ -130,7 +126,7 @@ def prepare_dataset() -> None:
         ("validation", validation_output),
         ("test", test_output),
     ]:
-        output_dir = PROCESSED_DIR / split_name
+        output_dir = processed_dir / split_name
         output_dir.mkdir(parents=True, exist_ok=True)
 
         output_path = output_dir / "data.csv"
@@ -145,17 +141,17 @@ def prepare_dataset() -> None:
     print()
     print("==> Persisting fitted preprocessor...")
 
-    ARTIFACTS_DIR.mkdir(
+    preprocessor_path.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
 
     joblib.dump(
         preprocessor,
-        PREPROCESSOR_PATH,
+        preprocessor_path,
     )
 
-    print(f"    ✓ {PREPROCESSOR_PATH}")
+    print(f"    ✓ {preprocessor_path}")
 
     print()
     print("==> Dataset preparation complete.")
@@ -169,5 +165,42 @@ def prepare_dataset() -> None:
     )
 
 
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+
+    parser = argparse.ArgumentParser(
+        description="Prepare customer churn datasets."
+    )
+
+    parser.add_argument(
+        "--input-data",
+        type=Path,
+        default=RAW_DATASET,
+        help="Path to the raw input dataset.",
+    )
+
+    parser.add_argument(
+        "--processed-dir",
+        type=Path,
+        default=PROCESSED_DIR,
+        help="Directory for processed datasets.",
+    )
+
+    parser.add_argument(
+        "--preprocessor-output",
+        type=Path,
+        default=PREPROCESSOR_PATH,
+        help="Path for the fitted preprocessor.",
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    prepare_dataset()
+    args = parse_args()
+
+    prepare_dataset(
+        raw_dataset=args.input_data,
+        processed_dir=args.processed_dir,
+        preprocessor_path=args.preprocessor_output,
+    )
