@@ -1,477 +1,641 @@
 # AWS Customer Churn MLOps Platform — Architecture
 
-The AWS Customer Churn MLOps Platform provides an end-to-end machine learning architecture for predicting customer churn, governing model promotion, deploying approved models, and monitoring production performance.
+## 1. Overview
 
-## Architecture Diagram
+The AWS Customer Churn MLOps Platform is designed as an end-to-end production machine learning architecture for predicting customer churn and operationalizing the resulting model.
+
+The architecture covers the complete machine learning lifecycle:
+
+* Data ingestion and storage
+* Data validation
+* Data preprocessing and feature engineering
+* Model training
+* Model evaluation
+* Automated model quality gating
+* Model registration and versioning
+* Model approval
+* Production deployment
+* Real-time inference
+* Monitoring and observability
+* Drift detection
+* Model retraining
+* Security and network isolation
+
+The platform uses managed AWS services wherever practical to reduce infrastructure management while maintaining reproducibility, traceability, security, and operational control.
+
+---
+
+## 2. Architecture Diagram
 
 ![AWS Customer Churn MLOps Architecture](./AWS_Churn_MLOps.png)
 
-The architecture uses managed AWS services to separate the machine learning lifecycle into distinct concerns:
+---
 
-* data storage
-* data validation
-* preprocessing
-* model training
-* model evaluation
-* quality control
-* model governance
-* deployment
-* inference
-* monitoring
-* retraining
+## 3. Architecture Objectives
 
-Amazon SageMaker provides the core ML execution and orchestration capabilities, while Amazon S3, Amazon ECR, AWS IAM, and Amazon CloudWatch provide the supporting storage, container, security, and observability layers.
+The architecture is designed around the following objectives:
 
+### Reproducibility
 
+Every model should be traceable to:
 
-# 1. High-Level Architecture
+* Source dataset
+* Preprocessing implementation
+* Container image
+* Training configuration
+* Hyperparameters
+* Model artifact
+* Evaluation results
+* Pipeline execution
 
-```mermaid
-flowchart TD
+### Automation
 
-    A[Customer Dataset] --> B[Amazon S3<br/>Raw Data]
+Repeatable ML operations are orchestrated through Amazon SageMaker Pipelines rather than manually executing individual processing and training jobs.
 
-    B --> C[Amazon SageMaker Pipelines]
+### Model Governance
 
-    C --> D[SageMaker Processing<br/>Data Validation]
+A model cannot proceed directly from training into production.
 
-    D --> E[SageMaker Processing<br/>Preprocessing]
-
-    E --> F[Amazon S3<br/>Processed Data]
-
-    F --> G[SageMaker Training<br/>XGBoost]
-
-    G --> H[Amazon S3<br/>Model Artifacts]
-
-    H --> I[SageMaker Processing<br/>Model Evaluation]
-    F --> I
-
-    I --> J[Evaluation Metrics]
-
-    J --> K{Model Quality Gate}
-
-    K -->|Pass| L[SageMaker Model Registry]
-    K -->|Fail| M[Reject Model Candidate]
-
-    L --> N[Pending Manual Approval]
-
-    N -->|Approved| O[Approved Model Version]
-    N -->|Rejected| M
-
-    O --> P[SageMaker Model Deployment]
-
-    P --> Q[Inference Endpoint]
-
-    Q --> R[Application / Consumer]
-
-    Q --> S[Amazon CloudWatch]
-
-    Q --> T[Model Monitoring]
-
-    S --> U[Operational Alerts]
-    T --> V[Data / Model Drift Detection]
-
-    U --> W[Operational Response]
-    V --> X[Retraining Decision]
-
-    X --> C
-
-    Y[Amazon ECR<br/>Processing Image] --> D
-    Y --> E
-    Y --> I
-
-    Z[IAM Execution Role] --> C
-    Z --> D
-    Z --> E
-    Z --> G
-    Z --> I
-    Z --> P
-```
-
-
-
-# 2. Architecture Flow
-
-The machine learning lifecycle follows a controlled progression:
+Models pass through:
 
 ```text
-Raw Customer Data
-        │
-        ▼
-Amazon S3
-        │
-        ▼
-Data Validation
-        │
-        ▼
-Data Preprocessing
-        │
-        ▼
-Model Training
-        │
-        ▼
-Model Evaluation
-        │
-        ▼
-Quality Gate
-        │
-        ├──────────── FAIL ────────────► Reject Candidate
-        │
-       PASS
-        │
-        ▼
-SageMaker Model Registry
-        │
-        ▼
-Pending Manual Approval
-        │
-        ├────────── REJECTED ──────────► No Deployment
-        │
-     APPROVED
-        │
-        ▼
-Model Deployment
-        │
-        ▼
-Inference Endpoint
-        │
-        ├────────────► Application / Consumer
-        │
-        └────────────► Monitoring
-                              │
-                              ▼
-                    Drift / Quality Detection
-                              │
-                              ▼
-                     Retraining Decision
-                              │
-                              ▼
-                     SageMaker Pipeline
+Training
+    ↓
+Evaluation
+    ↓
+Automated Quality Gate
+    ↓
+Model Registry
+    ↓
+Manual Approval
+    ↓
+Production Deployment
 ```
 
-The architecture deliberately separates **model training**, **model qualification**, **model approval**, and **model deployment**.
+### Security
 
-A successful training job therefore does not automatically result in a production deployment.
+The platform applies:
 
+* Least-privilege IAM
+* Private networking
+* Encryption
+* S3 Block Public Access
+* Controlled service-to-service access
+* Centralized logging
+* Model deployment governance
 
+### Observability
 
-# 3. Data Architecture
+Training, pipeline execution, inference, infrastructure, and model behavior are observable through AWS monitoring services.
 
-## Amazon S3
+### Cost Efficiency
 
-Amazon S3 provides the persistent storage layer for the ML lifecycle.
+Managed services and workload-specific compute are used so infrastructure exists primarily when workloads are executing.
 
-The logical bucket structure separates raw data, transformed datasets, model artifacts, and evaluation artifacts.
+---
 
-```text
-s3://<project-bucket>/
-│
-├── raw/
-│   └── telco/
-│
-├── processed/
-│   └── <pipeline-execution-id>/
-│
-├── artifacts/
-│   └── <pipeline-execution-id>/
-│       ├── preprocessing/
-│       └── evaluation/
-│
-└── customer-churn-training/
-```
+# 4. High-Level Architecture
 
-### Raw Data
-
-The `raw/` prefix contains the source customer dataset in its original form.
-
-Raw data is treated as immutable input to the ML workflow.
-
-### Processed Data
-
-The `processed/` prefix contains model-ready datasets generated by the preprocessing stage.
-
-Each pipeline execution writes to an execution-specific prefix.
-
-### Pipeline Artifacts
-
-The `artifacts/` hierarchy stores preprocessing and evaluation outputs associated with individual pipeline executions.
-
-### Training Artifacts
-
-Model artifacts generated by SageMaker Training are persisted independently from the ephemeral training infrastructure.
-
-
-
-# 4. Data Validation Layer
-
-Data validation is executed before preprocessing and training.
+The platform consists of the following logical layers:
 
 ```text
-Amazon S3
-    │
-    ▼
-Raw Dataset
-    │
-    ▼
-SageMaker Processing
-    │
-    ▼
-Validation Rules
-    │
-    ├── Schema Validation
-    ├── Required Columns
-    ├── Target Validation
-    ├── Data Type Validation
-    ├── Missing / Malformed Values
-    └── Dataset Integrity
-            │
-            ▼
-       Valid Dataset
-```
-
-The validation stage provides an explicit boundary between source data and the downstream ML workflow.
-
-Invalid input data prevents downstream processing rather than allowing malformed data to propagate into model training.
-
-
-
-# 5. Preprocessing Architecture
-
-Validated data is passed to a dedicated SageMaker Processing workload.
-
-```text
-Validated Dataset
-        │
-        ▼
-SageMaker Processing
-        │
-        ├── Data Cleaning
-        ├── Numeric Conversion
-        ├── Categorical Encoding
-        ├── Feature Transformation
-        ├── Dataset Splitting
-        └── Preprocessing Artifacts
-                │
-                ▼
-             Amazon S3
-                │
-        ┌───────┼────────┐
-        │       │        │
-        ▼       ▼        ▼
-      Train  Validation  Test
-```
-
-The processing stage generates consistent datasets for training and evaluation while maintaining a reproducible transformation process.
-
-
-
-# 6. Container Architecture
-
-Project-specific processing workloads execute inside a custom Docker environment.
-
-```text
-Source Code
-    │
-    ▼
-Docker Build
-    │
-    ▼
-Processing Image
-    │
-    ▼
-Amazon ECR
-    │
-    ▼
-Immutable Image Digest
-    │
-    ├────────► Validation
-    ├────────► Preprocessing
-    └────────► Evaluation
-```
-
-Amazon ECR stores the processing container.
-
-The SageMaker Pipeline references the container using an immutable image digest rather than depending exclusively on mutable image tags.
-
-This ensures that pipeline executions can be tied to a specific processing environment.
-
-
-
-# 7. Training Architecture
-
-Model training executes as a managed SageMaker Training Job.
-
-```text
-Amazon S3
-Processed Training Data
-        │
-        ▼
-SageMaker Training
-        │
-        ▼
-AWS Managed XGBoost Container
-        │
-        ▼
-Trained XGBoost Model
-        │
-        ▼
-Model Artifact
-        │
-        ▼
-Amazon S3
-```
-
-The training environment is independent from the custom processing environment.
-
-This allows project-specific processing logic to use a controlled custom container while training uses the SageMaker-managed XGBoost training environment.
-
-
-
-# 8. Model Evaluation Architecture
-
-The trained model is evaluated before it becomes eligible for registration.
-
-```text
-Model Artifact ──────────┐
-                         │
-Validation Dataset ──────┼──► SageMaker Processing
+┌─────────────────────────────┐
+│     Customer Data Sources   │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│          Amazon S3          │
+│         Raw Dataset         │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────┐
+│            SageMaker Pipelines               │
+│                                              │
+│ Validation → Preprocess → Train → Evaluate  │
+│                         → Quality Gate       │
+└───────────────────────┬──────────────────────┘
+                        │
+                        ▼
+              ┌─────────────────────┐
+              │ SageMaker Model     │
+              │ Registry            │
+              └──────────┬──────────┘
                          │
                          ▼
-                    Model Evaluation
+                 Manual Approval
                          │
-                 ┌───────┴────────┐
-                 │                │
-                 ▼                ▼
-        evaluation.json    predictions.csv
-                 │
-                 ▼
-         Pipeline Metrics
+                         ▼
+              ┌─────────────────────┐
+              │ SageMaker Endpoint  │
+              │ Real-Time Inference │
+              └──────────┬──────────┘
+                         │
+              ┌──────────┴───────────┐
+              ▼                      ▼
+        Applications            Monitoring
+                               / Drift Detection
+                                      │
+                                      ▼
+                                  Retraining
 ```
 
-The evaluation stage calculates:
+---
+
+# 5. End-to-End Architecture Flow
+
+The complete model lifecycle follows:
+
+```text
+Customer Dataset
+      │
+      ▼
+Amazon S3 Raw Zone
+      │
+      ▼
+SageMaker Pipeline
+      │
+      ├── Data Validation
+      │
+      ├── Data Preprocessing
+      │
+      ├── Model Training
+      │
+      ├── Model Evaluation
+      │
+      └── Quality Gate
+                │
+                ▼
+        SageMaker Model Registry
+                │
+                ▼
+           Manual Approval
+                │
+                ▼
+        SageMaker Deployment
+                │
+                ▼
+        SageMaker Endpoint
+                │
+                ▼
+       Real-Time Predictions
+                │
+                ▼
+        Monitoring Layer
+                │
+                ▼
+          Drift Detection
+                │
+                ▼
+            Retraining
+```
+
+---
+
+# 6. Data Architecture
+
+## 6.1 Source Dataset
+
+The platform uses the IBM Telco Customer Churn dataset.
+
+The dataset contains:
+
+* 7,043 customer records
+* 21 original attributes
+* Customer demographics
+* Subscription information
+* Contract information
+* Service usage
+* Billing information
+* Churn labels
+
+The prediction target is:
+
+```text
+Churn
+```
+
+with:
+
+```text
+Yes → Customer churned
+No  → Customer retained
+```
+
+---
+
+## 6.2 Amazon S3 Storage
+
+Amazon S3 acts as the central durable storage layer for the ML platform.
+
+It stores:
+
+* Raw datasets
+* Processed datasets
+* Training datasets
+* Validation datasets
+* Test datasets
+* Preprocessing artifacts
+* Model artifacts
+* Evaluation reports
+* Predictions
+* Monitoring data
+
+The project bucket follows the naming pattern:
+
+```text
+s3://aws-customer-churn-mlops-<account-id>-<region>/
+```
+
+Logical organization:
+
+```text
+raw/
+processed/
+artifacts/
+models/
+monitoring/
+```
+
+Pipeline-generated artifacts are further separated using the SageMaker Pipeline Execution ID.
+
+For example:
+
+```text
+processed/<PipelineExecutionId>/
+
+artifacts/<PipelineExecutionId>/preprocessing/
+
+artifacts/<PipelineExecutionId>/evaluation/
+```
+
+This prevents executions from overwriting one another and improves model lineage.
+
+---
+
+# 7. Data Validation Layer
+
+Before preprocessing or training occurs, the incoming dataset is validated.
+
+Validation checks include:
+
+* Required columns
+* Dataset schema
+* Target column presence
+* Missing values
+* Invalid numeric values
+* Unexpected categories
+* Dataset dimensions
+* Duplicate records
+* Target distribution
+
+A failed validation prevents invalid data from progressing further into the ML pipeline.
+
+This provides an early control boundary between source data and downstream model development.
+
+---
+
+# 8. Data Preprocessing Architecture
+
+Data preprocessing executes as a managed SageMaker Processing job.
+
+The preprocessing layer performs:
+
+* Data cleaning
+* Missing-value handling
+* Numeric conversion
+* Categorical encoding
+* Feature transformation
+* Train/validation/test splitting
+* Target encoding
+* Artifact generation
+
+The resulting datasets are stored in Amazon S3.
+
+The current feature engineering process produces:
+
+```text
+45 model features
++
+Churn target
+```
+
+Dataset split:
+
+| Dataset    | Records |
+| ---------- | ------: |
+| Training   |   4,225 |
+| Validation |   1,409 |
+| Test       |   1,409 |
+
+The preprocessing environment executes using a custom container stored in Amazon ECR.
+
+This ensures that preprocessing behavior is reproducible across pipeline executions.
+
+---
+
+# 9. Container Architecture
+
+Amazon Elastic Container Registry provides the container registry for custom ML processing workloads.
+
+The processing image contains:
+
+* Python runtime
+* Data processing dependencies
+* ML dependencies
+* Validation dependencies
+* Project processing code
+
+The container is used by SageMaker Processing for:
+
+* Data validation
+* Data preprocessing
+* Model evaluation
+
+The architecture supports immutable image references through container image digests.
+
+Example:
+
+```text
+633605692302.dkr.ecr.us-east-1.amazonaws.com/aws-customer-churn-processing@sha256:<digest>
+```
+
+Pinning the container image to a digest ensures that a pipeline execution cannot silently receive a different container version because a mutable image tag was updated.
+
+---
+
+# 10. Model Training Architecture
+
+Model training is executed using Amazon SageMaker managed training infrastructure.
+
+The model uses XGBoost for binary classification.
+
+The managed training image is:
+
+```text
+sagemaker-xgboost:1.7-1
+```
+
+Primary training configuration:
+
+```text
+objective           = binary:logistic
+eval_metric         = logloss
+num_round           = 200
+max_depth           = 4
+eta                 = 0.05
+subsample           = 0.8
+colsample_bytree    = 0.8
+scale_pos_weight    ≈ 2.769
+```
+
+The class weighting compensates for the imbalance between retained and churned customers.
+
+Training data is read from Amazon S3.
+
+After training completes, SageMaker packages the trained model artifact and writes it back to Amazon S3.
+
+---
+
+# 11. Model Evaluation Architecture
+
+After training, the generated model is evaluated against validation data.
+
+Evaluation executes as a separate SageMaker Processing job.
+
+The evaluation process generates:
 
 * Accuracy
 * Precision
 * Recall
-* F1 Score
+* F1 score
 * ROC-AUC
+* Predictions
+* Evaluation report
 
-The resulting evaluation artifact becomes the source of truth for automated model-quality decisions.
-
-
-
-# 9. Model Quality Gate
-
-Training success and model quality are treated as separate conditions.
-
-The model must satisfy all defined minimum thresholds:
+The primary machine-readable evaluation artifact is:
 
 ```text
-F1 Score >= 0.60
-
-Recall   >= 0.70
-
-ROC-AUC  >= 0.75
+evaluation.json
 ```
 
-The decision flow is:
+Predictions are persisted separately as:
 
 ```text
-Evaluation Metrics
-        │
-        ▼
-┌──────────────────────┐
-│  Model Quality Gate  │
-└──────────┬───────────┘
-           │
-     ┌─────┴─────┐
-     │           │
-    PASS        FAIL
-     │           │
-     ▼           ▼
-  Register     Reject
-   Model      Candidate
+predictions.csv
 ```
 
-Only qualifying models continue into the governance lifecycle.
-
-
-
-# 10. Model Registry and Governance
-
-Amazon SageMaker Model Registry provides the governance boundary between model development and deployment.
+The evaluation output is stored under:
 
 ```text
-Qualified Model
-      │
-      ▼
-SageMaker Model Registry
-      │
-      ▼
-Model Package Group
-      │
-      ▼
-Model Version
-      │
-      ▼
-Pending Manual Approval
-      │
-   ┌──┴─────────────┐
-   │                │
-Approved         Rejected
-   │                │
-   ▼                ▼
-Deployment      No Promotion
+artifacts/<PipelineExecutionId>/evaluation/
 ```
 
-Each qualifying model is stored as a versioned model package.
+This separates evaluation artifacts by pipeline execution and maintains traceability between a trained model and its corresponding evaluation results.
 
-The registry maintains the controlled progression of model candidates through the deployment lifecycle.
+---
 
+# 12. Model Quality Gate
 
+The architecture contains an automated model quality gate between model evaluation and model registration.
 
-# 11. Approval Architecture
+The minimum acceptance criteria are:
 
-Model quality alone does not authorize production deployment.
+| Metric   | Threshold |
+| -------- | --------: |
+| F1 Score |    ≥ 0.60 |
+| Recall   |    ≥ 0.70 |
+| ROC-AUC  |    ≥ 0.75 |
 
-The model enters the registry with an approval state requiring an explicit governance decision.
+The SageMaker Pipeline reads metrics directly from:
 
 ```text
-Automated Controls
-       │
-       ▼
+evaluation.json
+```
+
+The pipeline evaluates:
+
+```text
+F1 >= 0.60
+AND
+Recall >= 0.70
+AND
+ROC-AUC >= 0.75
+```
+
+Only models satisfying all required quality criteria are eligible for registration.
+
+This prevents a technically successful training job from automatically becoming a production candidate when its predictive performance is inadequate.
+
+---
+
+# 13. Model Performance
+
+The baseline XGBoost model achieved the following validation results:
+
+| Metric    | Validation |
+| --------- | ---------: |
+| Accuracy  |     0.7466 |
+| Precision |     0.5153 |
+| Recall    |     0.7647 |
+| F1        |     0.6157 |
+| ROC-AUC   |     0.8381 |
+
+Final test performance:
+
+| Metric    |   Test |
+| --------- | -----: |
+| Accuracy  | 0.7537 |
+| Precision | 0.5244 |
+| Recall    | 0.7754 |
+| F1        | 0.6257 |
+| ROC-AUC   | 0.8429 |
+
+The model therefore satisfies the defined model quality thresholds.
+
+---
+
+# 14. SageMaker Pipeline Architecture
+
+Amazon SageMaker Pipelines acts as the central orchestration service.
+
+The pipeline coordinates the complete machine learning workflow.
+
+```mermaid
+flowchart LR
+
+    A[Raw Data] --> B[Validate Data]
+
+    B --> C[Preprocess Data]
+
+    C --> D[Train XGBoost Model]
+
+    D --> E[Evaluate Model]
+
+    E --> F{Quality Gate}
+
+    F -->|Pass| G[Register Model]
+
+    F -->|Fail| H[Reject Candidate]
+
+    G --> I[Manual Approval]
+
+    I --> J[Deploy Model]
+
+    J --> K[SageMaker Endpoint]
+
+    K --> L[Monitoring]
+
+    L --> M{Drift Detected?}
+
+    M -->|Yes| A
+```
+
+Pipeline orchestration provides:
+
+* Repeatability
+* Execution history
+* Dependency management
+* Automated artifact flow
+* Quality enforcement
+* Model lineage
+* Controlled deployment progression
+
+---
+
+# 15. Model Registry and Governance
+
+Models that pass the automated quality gate are registered in SageMaker Model Registry.
+
+The registry provides a controlled model lifecycle.
+
+Each registered model version contains information such as:
+
+* Model artifact location
+* Container image
+* Model metrics
+* Model version
+* Approval state
+* Creation timestamp
+* Associated evaluation results
+
+Typical lifecycle:
+
+```text
+Training
+   ↓
+Evaluation
+   ↓
 Quality Gate
-       │
-       ▼
+   ↓
 Model Registry
-       │
-       ▼
-Manual Governance Control
-       │
-       ▼
-Model Approval
-       │
-       ▼
-Production Deployment
+   ↓
+Pending Manual Approval
+   ↓
+Approved
+   ↓
+Deployment
 ```
 
-This creates two distinct controls:
+The registry therefore acts as the governance boundary between model development and production deployment.
 
-### Automated Technical Control
+---
 
-Determines whether the model satisfies minimum performance requirements.
+# 16. Approval Architecture
 
-### Manual Governance Control
+Automated model quality checks are necessary but do not independently authorize production deployment.
 
-Determines whether an otherwise qualifying model is authorized for deployment.
+A model entering the registry is assigned an approval state.
 
-This prevents pipeline execution from implicitly becoming production authorization.
+Example:
 
+```text
+PendingManualApproval
+```
 
+An authorized reviewer evaluates:
 
-# 12. Deployment Architecture
+* Evaluation metrics
+* Model version
+* Pipeline execution
+* Training configuration
+* Business suitability
+* Operational considerations
 
-Approved model versions are deployed through SageMaker.
+The model is then explicitly:
+
+```text
+Approved
+```
+
+or:
+
+```text
+Rejected
+```
+
+Only approved model versions are eligible for production deployment.
+
+This separates:
+
+```text
+Technical model validation
+```
+
+from:
+
+```text
+Production authorization
+```
+
+---
+
+# 17. Deployment Architecture
+
+Approved model versions are deployed using Amazon SageMaker managed inference.
+
+Deployment flow:
 
 ```text
 SageMaker Model Registry
@@ -487,587 +651,762 @@ Endpoint Configuration
         │
         ▼
 SageMaker Endpoint
-        │
-        ▼
-Real-Time Inference
 ```
 
-The serving infrastructure is independent of the training infrastructure.
+The endpoint hosts the model behind a managed HTTPS inference API.
 
-This allows inference capacity to be managed according to production traffic rather than training requirements.
+SageMaker manages:
 
+* Model container startup
+* Compute provisioning
+* Endpoint lifecycle
+* Health monitoring
+* Invocation handling
+* Scaling configuration
 
+---
 
-# 13. Inference Architecture
+# 18. Inference Architecture
 
-The deployed model exposes a managed inference interface.
+Applications submit customer feature data to the SageMaker endpoint.
+
+Example flow:
 
 ```text
-Application / Consumer
-        │
-        ▼
-Inference Request
-        │
-        ▼
-SageMaker Endpoint
-        │
-        ▼
-Customer Feature Vector
-        │
-        ▼
-XGBoost Model
-        │
-        ▼
-Churn Probability
-        │
-        ▼
-Application / Retention Workflow
+CRM / Customer Success Application
+               │
+               ▼
+        AWS Application Layer
+               │
+               ▼
+        SageMaker Endpoint
+               │
+               ▼
+        XGBoost Model
+               │
+               ▼
+        Churn Probability
+               │
+               ▼
+        Business Workflow
 ```
 
-The prediction can be consumed by systems such as:
+The resulting prediction can support actions such as:
 
-* CRM applications
-* customer-success platforms
-* retention workflows
-* internal analytics systems
-* marketing automation systems
+* Retention campaigns
+* Customer-success prioritization
+* Proactive account outreach
+* Risk segmentation
+* Retention offer targeting
 
-The inference layer remains logically decoupled from the model-development pipeline.
+The ML platform produces predictions, while downstream business systems determine the appropriate customer intervention.
 
+---
 
+# 19. Deployment Strategies
 
-# 14. MLOps Orchestration
+Production model updates can use controlled deployment strategies.
 
-Amazon SageMaker Pipelines provides the workflow orchestration layer.
+## Blue/Green Deployment
+
+A new model version is deployed separately from the existing production model.
+
+Traffic is shifted only after validation.
+
+This provides a rollback path if the new model behaves unexpectedly.
+
+## Canary Deployment
+
+A small percentage of production traffic can initially be directed to a new model version.
+
+Operational and model metrics are observed before increasing traffic.
+
+## Rolling Model Replacement
+
+Where risk and traffic characteristics permit, the endpoint configuration can be updated to transition toward the new model version.
+
+The appropriate deployment strategy depends on:
+
+* Business criticality
+* Request volume
+* Model risk
+* Rollback requirements
+* Cost constraints
+
+---
+
+# 20. Monitoring Architecture
+
+Production ML systems require monitoring at multiple levels.
+
+The architecture therefore separates:
+
+1. Infrastructure monitoring
+2. Application monitoring
+3. Model monitoring
+
+---
+
+## 20.1 Infrastructure Monitoring
+
+Amazon CloudWatch captures operational metrics such as:
+
+* Endpoint invocations
+* Invocation errors
+* Model latency
+* CPU utilization
+* Memory utilization
+* Instance health
+* Processing job failures
+* Training job failures
+* Pipeline execution failures
+
+CloudWatch Logs centralizes logs from SageMaker workloads.
+
+---
+
+## 20.2 Application Monitoring
+
+The inference layer should track:
+
+* Request volume
+* Failed requests
+* Response latency
+* Prediction errors
+* Invalid request payloads
+* Upstream/downstream integration failures
+
+These metrics help distinguish model problems from application or infrastructure problems.
+
+---
+
+## 20.3 Model Monitoring
+
+SageMaker Model Monitor provides monitoring capabilities for production inference data.
+
+Monitoring can detect:
+
+* Feature drift
+* Data quality changes
+* Distribution changes
+* Prediction drift
+* Model quality degradation
+
+Production observations are compared against a baseline established from training or validation data.
+
+---
+
+# 21. Drift Detection and Retraining
+
+A production model can degrade even when infrastructure remains healthy.
+
+Customer behavior may change over time due to:
+
+* Pricing changes
+* New products
+* Contract changes
+* Competitor behavior
+* Economic conditions
+* Changes in customer demographics
+
+The monitoring layer therefore feeds the retraining lifecycle.
 
 ```text
-┌─────────────────────────────────────────────┐
-│          Amazon SageMaker Pipeline          │
-│                                             │
-│   Validation                               │
-│       │                                     │
-│       ▼                                     │
-│   Preprocessing                             │
-│       │                                     │
-│       ▼                                     │
-│   Training                                  │
-│       │                                     │
-│       ▼                                     │
-│   Evaluation                                │
-│       │                                     │
-│       ▼                                     │
-│   Quality Gate                              │
-│       │                                     │
-│       ▼                                     │
-│   Model Registration                        │
-│                                             │
-└─────────────────────────────────────────────┘
+Production Endpoint
+        │
+        ▼
+Inference Data
+        │
+        ▼
+Model Monitoring
+        │
+        ▼
+Drift Detection
+        │
+        ▼
+Threshold Breach
+        │
+        ▼
+Retraining Pipeline
+        │
+        ▼
+New Model Candidate
+        │
+        ▼
+Evaluation
+        │
+        ▼
+Quality Gate
+        │
+        ▼
+Model Registry
 ```
 
-The pipeline provides explicit dependencies between ML lifecycle stages.
+Retraining does not bypass the normal model governance process.
 
-A downstream stage executes only when its upstream requirements have been satisfied.
+A retrained model must still:
 
+* Be evaluated
+* Pass quality thresholds
+* Be registered
+* Receive approval
+* Pass deployment controls
 
+---
 
-# 15. IAM Architecture
+# 22. IAM Architecture
 
-The architecture separates the identity initiating ML operations from the workload identity used by SageMaker.
+AWS IAM provides the authorization layer for the platform.
+
+The architecture separates human identities from workload identities.
 
 ```text
-┌────────────────────────┐
-│ Developer / CI Identity│
-└────────────┬───────────┘
-             │
-             │ SageMaker API Operations
-             │ iam:PassRole
-             ▼
-┌───────────────────────────────┐
-│ SageMaker Execution Role      │
-└────────────┬──────────────────┘
-             │
-     ┌───────┼─────────┬───────────┐
-     │       │         │           │
-     ▼       ▼         ▼           ▼
-    S3      ECR    SageMaker   CloudWatch
+Developer / CI/CD Identity
+          │
+          │ iam:PassRole
+          ▼
+SageMaker Pipeline Execution Role
+          │
+          ├── Amazon S3
+          ├── Amazon ECR
+          ├── SageMaker Processing
+          ├── SageMaker Training
+          ├── SageMaker Models
+          ├── SageMaker Endpoints
+          └── Amazon CloudWatch
 ```
 
-## Developer / CI Identity
+The SageMaker execution role is trusted by:
 
-The initiating identity is responsible for operations such as:
+```text
+sagemaker.amazonaws.com
+```
 
-* creating or updating pipelines
-* starting pipeline executions
-* initiating deployments
-* passing the approved SageMaker execution role
+The role receives permissions required to:
 
-## SageMaker Execution Role
+* Read source data
+* Write processed artifacts
+* Pull ECR images
+* Create processing jobs
+* Create training jobs
+* Create models
+* Register model versions
+* Create endpoint configurations
+* Create endpoints
+* Write logs and metrics
 
-The SageMaker workload identity receives only the permissions required to interact with the resources used by the ML workflow.
+The developer or CI/CD identity receives `iam:PassRole` only for the specific SageMaker execution role required by the platform.
 
-These include controlled access to:
+This prevents arbitrary role delegation.
 
-* project S3 resources
-* required ECR repositories
+---
+
+# 23. Security Architecture
+
+Security controls are applied across the data, execution, deployment, and monitoring layers.
+
+## Identity Security
+
+IAM policies follow least privilege.
+
+Permissions are separated between:
+
+* Developers
+* CI/CD workloads
 * SageMaker workloads
+* Deployment operations
+
+## Data Security
+
+Amazon S3 provides:
+
+* Block Public Access
+* Encryption at rest
+* Bucket policies
+* Versioning where required
+* Controlled IAM access
+
+Sensitive production customer data should not be publicly accessible.
+
+## Container Security
+
+Container images are stored in private Amazon ECR repositories.
+
+Production images should be:
+
+* Versioned
+* Scanned
+* Access controlled
+* Preferably referenced using immutable digests
+
+## Model Security
+
+Model artifacts are stored in private S3 locations.
+
+Model deployment permissions are separated from model training permissions where organizational requirements justify stronger separation of duties.
+
+## Logging and Audit
+
+AWS logging services provide visibility into infrastructure and API activity.
+
+Relevant controls include:
+
 * CloudWatch Logs
-* required supporting AWS APIs
+* CloudTrail
+* SageMaker execution history
+* Model Registry history
 
-## `iam:PassRole`
+---
 
-The initiating identity is restricted to passing the designated SageMaker execution role rather than arbitrary IAM roles.
+# 24. Network Architecture
 
-This maintains separation between workload permissions and human or CI permissions.
+Production SageMaker workloads are designed to operate within an Amazon VPC.
 
-
-
-# 16. Security Architecture
-
-Security controls are applied across identity, data, compute, and deployment layers.
+The architecture uses private subnets for ML workloads where appropriate.
 
 ```text
-                 Security Architecture
-                         │
-       ┌─────────────────┼─────────────────┐
-       │                 │                 │
-       ▼                 ▼                 ▼
-   Identity             Data            Workloads
-       │                 │                 │
-       ▼                 ▼                 ▼
-Least Privilege     Encryption       IAM Execution Role
-Role Separation     S3 Controls      Controlled Containers
-PassRole Control    Access Policy    Managed Compute
+                    Amazon VPC
+
+        ┌───────────────────────────────┐
+        │        Private Subnets        │
+        │                               │
+        │  SageMaker Processing Jobs   │
+        │  SageMaker Training Jobs     │
+        │  SageMaker Endpoint          │
+        │                               │
+        └──────────────┬────────────────┘
+                       │
+                       ▼
+                VPC Endpoints
+                       │
+          ┌────────────┼─────────────┐
+          ▼            ▼             ▼
+         S3           ECR       CloudWatch
 ```
 
-Core security principles include:
-
-* least-privilege IAM
-* separation of human and workload identities
-* controlled `iam:PassRole`
-* restricted S3 access
-* encrypted storage
-* reproducible container images
-* controlled model promotion
-* centralized operational logging
-* auditable model lifecycle
-
-
-
-# 17. Network Architecture
-
-Production SageMaker workloads operate within a controlled VPC architecture.
-
-```text
-                         AWS VPC
-                           │
-             ┌─────────────┴─────────────┐
-             │                           │
-             ▼                           ▼
-      Private Subnet A            Private Subnet B
-             │                           │
-             └─────────────┬─────────────┘
-                           │
-                           ▼
-                  SageMaker Workloads
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-          ▼                ▼                ▼
-     S3 Endpoint      ECR Endpoints   CloudWatch
-                                      Logs Endpoint
-```
-
-SageMaker workloads use private networking where required, with VPC endpoints providing private connectivity to supporting AWS services.
-
-Relevant endpoint access includes:
+VPC endpoints can provide private access to AWS services including:
 
 * Amazon S3
 * Amazon ECR API
 * Amazon ECR Docker registry
-* CloudWatch Logs
-* other required AWS service APIs
+* Amazon CloudWatch Logs
+* AWS STS
+* SageMaker APIs
 
-This reduces reliance on public-network paths for internal ML workload communication.
+Private connectivity reduces dependence on public internet access.
 
+Security groups restrict network traffic according to workload requirements.
 
+---
 
-# 18. Observability Architecture
+# 25. Encryption Architecture
 
-The platform separates infrastructure observability from ML observability.
+Encryption is applied at multiple layers.
 
-```text
-                     Production Model
-                           │
-             ┌─────────────┴─────────────┐
-             │                           │
-             ▼                           ▼
-     Operational Metrics           ML Metrics
-             │                           │
-             ▼                           ▼
-     Amazon CloudWatch         Model Monitoring
-             │                           │
-             ▼                           ▼
-     Logs / Metrics / Alarms      Drift / Quality
-             │                           │
-             └─────────────┬─────────────┘
-                           ▼
-                     Alerting Layer
-                           │
-                           ▼
-                  Operational Response
-```
+## Encryption at Rest
 
-## Infrastructure Monitoring
+Applicable resources include:
 
-Amazon CloudWatch provides visibility into:
+* Amazon S3 objects
+* ECR images
+* SageMaker storage
+* Model artifacts
+* Monitoring outputs
 
-* endpoint invocations
-* invocation errors
-* latency
-* pipeline failures
-* processing failures
-* training failures
-* resource utilization
-* operational logs
+AWS managed encryption or customer-managed AWS KMS keys can be selected according to compliance requirements.
 
-## ML Monitoring
+## Encryption in Transit
 
-Model monitoring observes:
+AWS service APIs use TLS.
 
-* input-data characteristics
-* feature distributions
-* prediction distributions
-* model quality
-* data drift
-* model-performance degradation
+Inference requests to SageMaker endpoints are transmitted over HTTPS.
 
+Private service connectivity through VPC endpoints further reduces exposure to public network paths.
 
+---
 
-# 19. Retraining Architecture
+# 26. Observability Architecture
 
-Monitoring feeds a controlled retraining lifecycle.
+Observability covers the complete ML lifecycle.
 
 ```text
-Production Model
-      │
-      ▼
-Model Monitoring
-      │
-      ▼
-Drift / Performance Signal
-      │
-      ▼
-Retraining Trigger
-      │
-      ▼
 SageMaker Pipeline
-      │
-      ▼
-New Model Candidate
-      │
-      ▼
-Evaluation
-      │
-      ▼
-Quality Gate
-      │
-      ▼
+       │
+       ├── Processing Logs
+       ├── Training Logs
+       ├── Evaluation Logs
+       └── Pipeline Status
+                │
+                ▼
+          Amazon CloudWatch
+
+
+SageMaker Endpoint
+       │
+       ├── Invocation Metrics
+       ├── Error Metrics
+       ├── Latency Metrics
+       └── Resource Metrics
+                │
+                ▼
+          Amazon CloudWatch
+
+
+Production Predictions
+       │
+       ▼
+SageMaker Model Monitor
+       │
+       ├── Data Quality
+       ├── Data Drift
+       └── Model Quality
+```
+
+CloudWatch alarms can notify operations teams when defined thresholds are exceeded.
+
+---
+
+# 27. Artifact Lineage
+
+Artifact lineage is central to the architecture.
+
+A production model should be traceable through:
+
+```text
+Production Endpoint
+       │
+       ▼
+Model Version
+       │
+       ▼
 Model Registry
-      │
-      ▼
-Approval
-      │
-      ▼
-Deployment
-```
-
-Retraining does not bypass model governance.
-
-Every retrained model becomes a new candidate and must pass evaluation, quality controls, registration, and approval before replacing an existing production model.
-
-
-
-# 20. Artifact Lineage
-
-Pipeline artifacts are isolated by execution.
-
-```text
-Pipeline Execution
        │
-       ├── Execution ID
+       ▼
+Model Artifact
        │
-       ├── Processed Dataset
-       │
-       ├── Preprocessing Artifacts
-       │
-       ├── Model Artifact
-       │
-       ├── Evaluation Results
-       │
-       └── Model Version
-```
-
-Execution-specific S3 paths establish traceability between pipeline runs and generated artifacts.
-
-Combined with model versioning in SageMaker Model Registry, this allows a production model to be traced back through its ML lifecycle.
-
-
-
-# 21. Scalability Architecture
-
-Storage, processing, training, and inference scale independently.
-
-```text
-                    ML Platform
-                        │
-       ┌────────────────┼────────────────┐
-       │                │                │
-       ▼                ▼                ▼
-      Data            Training        Inference
-       │                │                │
-       ▼                ▼                ▼
-   Amazon S3       SageMaker Jobs    SageMaker
-                                    Endpoint
-```
-
-Amazon S3 scales independently of compute workloads.
-
-SageMaker Processing and Training resources exist only for the duration of their workloads.
-
-Inference capacity is managed independently according to production traffic.
-
-This prevents training requirements from dictating production-serving capacity.
-
-
-
-# 22. Availability and Resilience
-
-The architecture avoids maintaining persistent infrastructure for batch ML operations.
-
-```text
-Persistent Layer
-     │
-     ├── Amazon S3
-     ├── Amazon ECR
-     └── Model Registry
-
-Ephemeral Compute
-     │
-     ├── Processing Jobs
-     └── Training Jobs
-
-Serving Layer
-     │
-     └── SageMaker Endpoint
-```
-
-Separating durable artifacts from ephemeral compute allows processing and training workloads to be recreated without coupling their lifecycle to stored datasets or model artifacts.
-
-Pipeline orchestration also provides a consistent mechanism for rerunning failed or updated workflows.
-
-
-
-# 23. Cost Architecture
-
-The architecture minimizes persistent compute during model development and training.
-
-Processing and training infrastructure is provisioned for individual jobs and terminated after completion.
-
-```text
-Processing Job
-      │
-      ▼
-Execute Workload
-      │
-      ▼
-Terminate Compute
-```
-
-```text
+       ▼
 Training Job
-      │
-      ▼
-Train Model
-      │
-      ▼
-Persist Artifact
-      │
-      ▼
-Terminate Compute
+       │
+       ▼
+Processed Dataset
+       │
+       ▼
+Preprocessing Job
+       │
+       ▼
+Raw Dataset
 ```
 
-Primary cost drivers are:
+Pipeline execution identifiers are incorporated into S3 artifact paths to prevent overwriting and improve traceability.
 
-* SageMaker Processing
-* SageMaker Training
-* SageMaker inference
-* Amazon S3 storage
-* Amazon ECR storage
-* CloudWatch logs and metrics
-* data transfer where applicable
+This supports questions such as:
 
-Cost controls include:
+* Which data trained this model?
+* Which preprocessing version was used?
+* Which container produced the dataset?
+* Which hyperparameters were used?
+* What metrics did the model achieve?
+* Which pipeline execution produced the model?
+* Who approved the model?
+* Which model version is currently deployed?
 
-* workload-specific instance sizing
-* managed spot training where appropriate
-* S3 lifecycle management
-* execution-artifact retention policies
-* inference-capacity optimization
-* separation of ephemeral and persistent infrastructure
+---
 
+# 28. Scalability Architecture
 
+The architecture separates storage and compute.
 
-# 24. Architecture Decisions
+Amazon S3 provides independently scalable object storage.
 
-## Amazon S3 for ML Data and Artifacts
+SageMaker Processing and Training provision compute for individual jobs rather than requiring permanently running processing infrastructure.
 
-S3 provides durable storage independent of the lifecycle of processing and training infrastructure.
+Production inference capacity can scale independently from model training infrastructure.
 
-It establishes persistent boundaries between pipeline stages and supports execution-specific artifact organization.
-
-## SageMaker Processing for Validation and Transformation
-
-Processing workloads are separated from model training because data validation, transformation, and evaluation have different responsibilities from optimization of the ML model itself.
-
-## Custom Containers for Processing
-
-Custom Docker containers provide explicit control over:
-
-* runtime dependencies
-* Python packages
-* preprocessing logic
-* evaluation logic
-* reproducibility
-
-## Managed XGBoost for Training
-
-SageMaker-managed XGBoost provides a managed training environment without requiring the project to maintain an unnecessary custom training container.
-
-## SageMaker Pipelines for ML Orchestration
-
-The workflow contains ML-specific dependencies between datasets, processing outputs, model artifacts, evaluation metrics, and model versions.
-
-SageMaker Pipelines provides the orchestration layer for these dependencies.
-
-## Automated Model Quality Gate
-
-Model training success is not equivalent to model suitability.
-
-Explicit metric thresholds provide an automated technical control before model registration.
-
-## SageMaker Model Registry for Governance
-
-The registry separates model generation from production authorization and provides model versioning and approval-state management.
-
-## Manual Approval Before Production
-
-Human approval provides an additional governance boundary between automated model qualification and production deployment.
-
-## Execution-Scoped Artifact Paths
-
-Pipeline execution identifiers prevent artifact collisions and provide a foundation for model lineage.
-
-## Dedicated SageMaker Execution Role
-
-Workload permissions are isolated from developer or CI permissions through a dedicated SageMaker execution role.
-
-## Managed Services First
-
-Managed AWS services are used where they reduce operational overhead while preserving the required security, governance, and workload controls.
-
-
-
-# 25. End-to-End Architecture
-
-The resulting platform can be summarized as:
+This allows:
 
 ```text
-                         CUSTOMER DATA
-                              │
-                              ▼
-                         AMAZON S3
-                              │
-                              ▼
-                  ┌─────────────────────┐
-                  │ SAGEMAKER PIPELINE  │
-                  └──────────┬──────────┘
-                             │
-                             ▼
-                       VALIDATION
-                             │
-                             ▼
-                      PREPROCESSING
-                             │
-                             ▼
-                          TRAINING
-                             │
-                             ▼
-                         EVALUATION
-                             │
-                             ▼
-                       QUALITY GATE
-                             │
-                    ┌────────┴────────┐
-                    │                 │
-                  PASS              FAIL
-                    │                 │
-                    ▼                 ▼
-              MODEL REGISTRY      REJECT
-                    │
-                    ▼
-             MANUAL APPROVAL
-                    │
-             ┌──────┴──────┐
-             │             │
-          APPROVED      REJECTED
-             │             │
-             ▼             ▼
-         DEPLOYMENT      STOP
-             │
-             ▼
-      SAGEMAKER ENDPOINT
-             │
-       ┌─────┴──────┐
-       │            │
-       ▼            ▼
- APPLICATION     MONITORING
-                    │
-                    ▼
-             DRIFT / QUALITY
-                    │
-                    ▼
-               RETRAINING
-                    │
-                    └──────────────► SAGEMAKER PIPELINE
+Data Storage
+Training Compute
+Processing Compute
+Inference Compute
 ```
 
+to scale according to their own workload characteristics.
 
+---
 
-# 26. Architecture Principles
+# 29. Availability and Resilience
 
-The final architecture follows six core principles.
+Amazon S3 provides durable storage for datasets and ML artifacts.
+
+Pipeline jobs are stateless and can be re-executed using persisted artifacts.
+
+Model Registry preserves model versions independently from individual training jobs.
+
+Production endpoint resilience can be increased through:
+
+* Multiple instances
+* Auto Scaling
+* Multi-AZ infrastructure managed by SageMaker
+* Health monitoring
+* Controlled deployment strategies
+
+The architecture avoids relying on local developer storage for production ML artifacts.
+
+---
+
+# 30. Cost Architecture
+
+The architecture is designed to avoid permanently running infrastructure where it is unnecessary.
+
+## Processing
+
+SageMaker Processing instances exist only while validation, preprocessing, or evaluation jobs execute.
+
+## Training
+
+SageMaker Training compute exists only during model training.
+
+## Storage
+
+Amazon S3 provides low-cost durable storage for datasets and artifacts.
+
+Lifecycle policies can transition older artifacts to lower-cost storage classes where retention requirements permit.
+
+## Container Registry
+
+Amazon ECR stores reusable processing container images without requiring dedicated container infrastructure.
+
+## Inference
+
+The primary persistent cost is the production inference endpoint.
+
+For low-volume workloads, alternative inference strategies may be evaluated, including:
+
+* SageMaker Serverless Inference
+* Asynchronous Inference
+* Batch Transform
+
+The appropriate inference architecture should be selected according to latency, throughput, and availability requirements.
+
+---
+
+# 31. Architecture Decisions
+
+## Managed SageMaker Training Instead of Self-Managed EC2
+
+SageMaker Training eliminates the need to maintain dedicated ML training servers and integrates directly with the pipeline lifecycle.
+
+## SageMaker Pipelines Instead of Manual Orchestration
+
+Pipeline orchestration provides reproducibility, dependency management, execution history, and automated workflow control.
+
+## Custom ECR Processing Container
+
+A custom container provides deterministic dependencies across validation, preprocessing, and evaluation workloads.
+
+## Amazon S3 as the Artifact Store
+
+S3 provides durable, scalable, and cost-effective storage with native integration across SageMaker services.
+
+## XGBoost for the Baseline Model
+
+XGBoost provides strong performance for structured tabular classification workloads while maintaining relatively low training and inference complexity.
+
+## Automated Quality Gate
+
+Model registration is conditional on measurable performance rather than simply successful job execution.
+
+## Model Registry Before Deployment
+
+The registry provides model versioning and creates a governance boundary between experimentation and production.
+
+## Manual Production Approval
+
+Automated evaluation verifies technical quality, while explicit approval provides an additional control before a model can affect production systems.
+
+## Managed SageMaker Endpoint
+
+Managed inference reduces the operational overhead associated with building and maintaining custom model-serving infrastructure.
+
+## CloudWatch and Model Monitor
+
+Infrastructure monitoring and model monitoring address different failure modes and are therefore both required in the production architecture.
+
+---
+
+# 32. Separation of Responsibilities
+
+The platform deliberately separates responsibilities across the ML lifecycle.
+
+| Layer                | Responsibility                        |
+| -------------------- | ------------------------------------- |
+| Amazon S3            | Dataset and artifact storage          |
+| SageMaker Processing | Validation, preprocessing, evaluation |
+| Amazon ECR           | Processing container registry         |
+| SageMaker Training   | Model training                        |
+| SageMaker Pipelines  | ML workflow orchestration             |
+| Quality Gate         | Automated model acceptance            |
+| Model Registry       | Model versioning and governance       |
+| Manual Approval      | Production authorization              |
+| SageMaker Endpoint   | Real-time model serving               |
+| CloudWatch           | Operational monitoring                |
+| Model Monitor        | Model/data monitoring                 |
+| IAM                  | Authorization                         |
+| VPC                  | Network isolation                     |
+
+This reduces coupling and provides clearer security and operational boundaries.
+
+---
+
+# 33. Production MLOps Lifecycle
+
+The final production lifecycle is:
+
+```text
+                         ┌──────────────────┐
+                         │    Raw Data      │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    Validation    │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Preprocessing   │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │     Training     │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    Evaluation    │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │   Quality Gate   │
+                         └────────┬─────────┘
+                                  │
+                             Pass │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Model Registry  │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │ Manual Approval  │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    Deployment    │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │     Endpoint     │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │    Monitoring    │
+                         └────────┬─────────┘
+                                  │
+                           Drift? │
+                                  ▼
+                         ┌──────────────────┐
+                         │    Retraining    │
+                         └────────┬─────────┘
+                                  │
+                                  └──────────────► Validation
+```
+
+---
+
+# 34. Architecture Principles
+
+The final architecture follows these principles:
 
 ### Reproducibility
 
-Pipeline code, processing containers, parameters, and artifacts provide repeatable ML execution.
+Data, code, containers, configuration, and artifacts are versioned or traceable.
 
-### Traceability
+### Automation
 
-Pipeline executions, datasets, model artifacts, evaluation results, and model versions remain associated throughout the model lifecycle.
+Repeatable ML operations are automated through SageMaker Pipelines.
 
-### Separation of Concerns
+### Governance
 
-Data storage, processing, training, governance, serving, security, and monitoring remain independent architectural responsibilities.
+Models are evaluated, registered, versioned, and explicitly approved before production deployment.
 
-### Security by Design
+### Least Privilege
 
-IAM boundaries, controlled role passing, private networking, encryption, and workload isolation are incorporated into the architecture.
+IAM permissions are limited according to workload responsibilities.
 
-### Governed Model Promotion
+### Private-by-Default Infrastructure
 
-A model must pass both automated quality controls and governance approval before production deployment.
+Production ML workloads use private networking and controlled AWS service access.
 
-### Operational Feedback
+### Immutable Artifacts
 
-Production monitoring feeds back into the ML lifecycle, allowing degradation or drift to initiate controlled retraining and model replacement.
+Container images and model artifacts are versioned to prevent uncontrolled changes.
+
+### Observability
+
+Infrastructure, pipeline, endpoint, and model behavior are monitored independently.
+
+### Controlled Deployment
+
+Production promotion is treated as a governed operation rather than a direct consequence of training.
+
+### Resilience
+
+Durable artifacts and managed infrastructure allow workloads to be reproduced or redeployed.
+
+### Cost Awareness
+
+Compute is provisioned according to workload requirements instead of maintaining unnecessary always-on infrastructure.
+
+---
+
+# 35. Final Architecture Summary
+
+The AWS Customer Churn MLOps Platform implements a complete machine learning lifecycle using AWS managed services.
+
+The architecture integrates:
+
+```text
+Amazon S3
+      ↓
+SageMaker Processing
+      ↓
+SageMaker Training
+      ↓
+SageMaker Evaluation
+      ↓
+Automated Quality Gate
+      ↓
+SageMaker Model Registry
+      ↓
+Manual Approval
+      ↓
+SageMaker Managed Inference
+      ↓
+Amazon CloudWatch
+      +
+SageMaker Model Monitor
+      ↓
+Retraining
+```
+
+Amazon ECR provides reproducible processing environments, IAM provides workload authorization, and the VPC architecture provides network isolation.
+
+The resulting design separates data engineering, model development, governance, deployment, security, and operations while maintaining traceability across the complete model lifecycle.
 
