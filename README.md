@@ -771,6 +771,7 @@ The project is being implemented incrementally to preserve clear separation betw
 
 ### Phase 2 — Data & Local ML
 
+```
 ✅ Dataset acquisition
 ✅ Data validation
 ✅ Data preprocessing
@@ -778,16 +779,18 @@ The project is being implemented incrementally to preserve clear separation betw
 ✅ Train/validation/test split
 ✅ Local XGBoost training
 ✅ Local evaluation baseline
-
+```
 ### Phase 3 — Containerized Processing
 
+```
 ✅ Docker processing environment
 ✅ Amazon ECR repository
 ✅ Processing container image
 ✅ Immutable image digest reference
-
+```
 ### Phase 4 — SageMaker Pipeline
 
+```
 ✅ Validation step
 ✅ Preprocessing step
 ✅ Training step
@@ -796,27 +799,31 @@ The project is being implemented incrementally to preserve clear separation betw
 ✅ Pipeline definition compilation
 🚧 Pipeline IAM configuration
 ⏳ First successful AWS execution
-
+```
 ### Phase 5 — Model Governance
 
+```
 ⏳ SageMaker Model Registry
 ⏳ Model package group
 ⏳ Model versioning
 ⏳ Manual approval workflow
+```
 
 ### Phase 6 — Deployment
 
+```
 ⏳ Endpoint configuration
 ⏳ Model deployment
 ⏳ Inference testing
-
+```
 ### Phase 7 — Operations
 
+```
 ⏳ Production monitoring
 ⏳ Drift monitoring
 ⏳ Alerting
 ⏳ Pipeline automation
-
+```
 
 ## Results
 
