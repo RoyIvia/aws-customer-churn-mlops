@@ -760,13 +760,14 @@ The raw dataset is intentionally excluded from source control.
 The project is being implemented incrementally to preserve clear separation between architecture design, local validation, and AWS deployment.
 
 ### Phase 1 — Architecture & Requirements
-
+```
 ✅ Business requirements
 ✅ ML problem definition
 ✅ Architecture design
 ✅ Architecture decisions
 ✅ Security design
 ✅ Cost considerations
+```
 
 ### Phase 2 — Data & Local ML
 
