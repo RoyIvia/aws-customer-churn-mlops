@@ -89,7 +89,7 @@ Churn = No  → 0
 
 The model outputs the probability that a customer belongs to the churn class.
 
----
+
 
 ## Solution
 
