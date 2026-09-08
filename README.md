@@ -141,7 +141,7 @@ The model is trained using XGBoost.
 
 Models that satisfy defined evaluation thresholds will eventually be registered in SageMaker Model Registry for controlled versioning and approval before deployment.
 
----
+
 
 ## Architecture
 
