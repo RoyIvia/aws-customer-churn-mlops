@@ -60,7 +60,7 @@ The solution demonstrates the complete lifecycle of a production-oriented ML wor
 
 The project is implemented from both an **MLOps engineering** and **AWS Solutions Architecture** perspective rather than treating model training as an isolated data-science exercise.
 
----
+
 
 ## Business Problem
 
