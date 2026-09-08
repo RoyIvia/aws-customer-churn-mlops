@@ -113,7 +113,7 @@ The platform consists of the following logical layers:
 ┌──────────────────────────────────────────────┐
 │            SageMaker Pipelines               │
 │                                              │
-│ Validation → Preprocess → Train → Evaluate  │
+│ Validation → Preprocess → Train → Evaluate   │
 │                         → Quality Gate       │
 └───────────────────────┬──────────────────────┘
                         │
@@ -634,7 +634,7 @@ Example:
 PendingManualApproval
 ```
 
-An authorized reviewer evaluates:
+An authorised reviewer evaluates:
 
 * Evaluation metrics
 * Model version
@@ -734,7 +734,7 @@ CRM / Customer Success Application
 The resulting prediction can support actions such as:
 
 * Retention campaigns
-* Customer-success prioritization
+* Customer-success prioritisation
 * Proactive account outreach
 * Risk segmentation
 * Retention offer targeting
@@ -896,7 +896,7 @@ A retrained model must still:
 
 # 22. IAM Architecture
 
-AWS IAM provides the authorization layer for the platform.
+AWS IAM provides the authorisation layer for the platform.
 
 The architecture separates human identities from workload identities.
 
@@ -1010,9 +1010,9 @@ The architecture uses private subnets for ML workloads where appropriate.
         ┌───────────────────────────────┐
         │        Private Subnets        │
         │                               │
-        │  SageMaker Processing Jobs   │
-        │  SageMaker Training Jobs     │
-        │  SageMaker Endpoint          │
+        │  SageMaker Processing Jobs    │
+        │  SageMaker Training Jobs      │
+        │  SageMaker Endpoint           │
         │                               │
         └──────────────┬────────────────┘
                        │
