@@ -584,7 +584,7 @@ docs/monitoring.md
 
 
 
-## Cost Optimization
+## Cost Optimisation
 
 The architecture deliberately avoids maintaining always-on infrastructure during the training workflow.
 
@@ -609,7 +609,7 @@ Major cost considerations include:
 * ECR image storage
 * CloudWatch logging
 
-Future optimizations may include:
+Future optimisations may include:
 
 * SageMaker Managed Spot Training
 * right-sizing training instances
@@ -816,64 +816,6 @@ The project is being implemented incrementally to preserve clear separation betw
 ⏳ Alerting
 ⏳ Pipeline automation
 
----
-
-## MLA-C01 Coverage
-
-This project is designed to demonstrate practical coverage of major domains associated with production machine learning on AWS.
-
-### Data Preparation
-
-* data quality validation
-* preprocessing
-* feature engineering
-* categorical encoding
-* dataset splitting
-* class imbalance handling
-
-### Model Development
-
-* algorithm selection
-* XGBoost training
-* hyperparameter configuration
-* model evaluation
-* threshold selection
-
-### Deployment and Orchestration
-
-* SageMaker Processing
-* SageMaker Training
-* SageMaker Pipelines
-* Docker
-* Amazon ECR
-* Amazon S3
-
-### MLOps
-
-* automated ML pipelines
-* reproducible containers
-* execution-specific artifact storage
-* evaluation gates
-* model governance
-* model versioning
-* approval workflows
-
-### Security
-
-* IAM roles
-* `iam:PassRole`
-* least privilege
-* service trust relationships
-* controlled S3 access
-
-### Monitoring
-
-* CloudWatch
-* model quality monitoring
-* data drift
-* operational monitoring
-
----
 
 ## Results
 
