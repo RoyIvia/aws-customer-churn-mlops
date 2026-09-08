@@ -502,7 +502,7 @@ Amazon SageMaker Pipelines acts as the central orchestration service.
 
 The pipeline coordinates the complete machine learning workflow.
 
-```mermaid
+```
 flowchart LR
 
     A[Raw Data] --> B[Validate Data]
