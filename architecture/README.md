@@ -1,7 +1,5 @@
 # AWS Customer Churn MLOps Platform — Architecture
 
-## Overview
-
 The AWS Customer Churn MLOps Platform provides an end-to-end machine learning architecture for predicting customer churn, governing model promotion, deploying approved models, and monitoring production performance.
 
 ## Architecture Diagram
