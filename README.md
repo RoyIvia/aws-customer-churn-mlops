@@ -10,8 +10,8 @@ The project has progressed from architecture and requirements design into implem
 
 Current implementation status:
 
-| Component                        | Status             |
-| -------------------------------- | ------------------ |
+| Component                        | Status              |
+| -------------------------------- | ------------------- |
 | Business requirements            | ✅ Complete         |
 | ML problem definition            | ✅ Complete         |
 | Architecture design              | ✅ Complete         |
@@ -25,7 +25,7 @@ Current implementation status:
 | Amazon ECR repository/image      | ✅ Complete         |
 | SageMaker Pipeline definition    | ✅ Complete         |
 | Automated pipeline tests         | ✅ 34 tests passing |
-| Pipeline deployment to SageMaker | 🚧 In progress     |
+| Pipeline deployment to SageMaker | 🚧 In progress      |
 | Pipeline execution               | ⏳ Pending          |
 | Model Registry integration       | ⏳ Planned          |
 | Model deployment                 | ⏳ Planned          |
@@ -172,7 +172,7 @@ The target architecture follows an AWS-native managed-service approach.
    Processing          Processing            Training Job
           │                  │                   │
           │                  ▼                   │
-          │             Amazon S3               │
+          │             Amazon S3                │
           │             Processed Data           │
           │                                      ▼
           │                                Model Artifact
@@ -920,11 +920,4 @@ Operations
 
 The objective is to demonstrate how machine learning workloads should be evaluated from both an **ML engineering** and **cloud architecture** perspective.
 
----
-
-## Disclaimer
-
-This repository distinguishes between components that were **implemented and validated**, components that are **currently being implemented**, and components that are **architecturally designed but not yet deployed**.
-
-No AWS deployment, pipeline execution, model registration, endpoint deployment, or monitoring capability is represented as completed unless it has actually been implemented and validated.
 
