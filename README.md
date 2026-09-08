@@ -203,7 +203,7 @@ The target architecture follows an AWS-native managed-service approach.
 
 Detailed architecture documentation is maintained under the [`docs/`](docs/) and [`architecture/`](architecture/) directories.
 
----
+
 
 ## Technology Stack
 
