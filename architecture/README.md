@@ -495,54 +495,95 @@ Final test performance:
 The model therefore satisfies the defined model quality thresholds.
 
 ---
-
 # 14. SageMaker Pipeline Architecture
 
 Amazon SageMaker Pipelines acts as the central orchestration service.
 
 The pipeline coordinates the complete machine learning workflow.
 
+```text
+Raw Data
+   │
+   ▼
+Validate Data
+   │
+   ▼
+Preprocess Data
+   │
+   ▼
+Train XGBoost Model
+   │
+   ▼
+Evaluate Model
+   │
+   ▼
+Quality Gate
+   │
+   ├──── PASS ────► Register Model
+   │                    │
+   │                    ▼
+   │               Manual Approval
+   │                    │
+   │                    ▼
+   │               Deploy Model
+   │                    │
+   │                    ▼
+   │              SageMaker Endpoint
+   │                    │
+   │                    ▼
+   │                Monitoring
+   │                    │
+   │                    ▼
+   │              Drift Detected?
+   │                    │
+   │                  YES
+   │                    │
+   │                    └──────────────► Raw Data
+   │
+   └──── FAIL ────► Reject Candidate
 ```
-flowchart LR
 
-    A[Raw Data] --> B[Validate Data]
+The pipeline implements the following lifecycle:
 
-    B --> C[Preprocess Data]
-
-    C --> D[Train XGBoost Model]
-
-    D --> E[Evaluate Model]
-
-    E --> F{Quality Gate}
-
-    F -->|Pass| G[Register Model]
-
-    F -->|Fail| H[Reject Candidate]
-
-    G --> I[Manual Approval]
-
-    I --> J[Deploy Model]
-
-    J --> K[SageMaker Endpoint]
-
-    K --> L[Monitoring]
-
-    L --> M{Drift Detected?}
-
-    M -->|Yes| A
+```text
+Raw Data
+   ↓
+Validate Data
+   ↓
+Preprocess Data
+   ↓
+Train XGBoost Model
+   ↓
+Evaluate Model
+   ↓
+Quality Gate
+   ├── Pass → Register Model → Manual Approval → Deploy Model
+   │                                      ↓
+   │                              SageMaker Endpoint
+   │                                      ↓
+   │                                  Monitoring
+   │                                      ↓
+   │                              Drift Detected?
+   │                                      ↓ Yes
+   │                                  Raw Data
+   │
+   └── Fail → Reject Candidate
 ```
 
 Pipeline orchestration provides:
 
-* Repeatability
-* Execution history
-* Dependency management
-* Automated artifact flow
-* Quality enforcement
-* Model lineage
-* Controlled deployment progression
+* Repeatable execution of the complete ML workflow
+* Dependency management between pipeline stages
+* Automated data validation and preprocessing
+* Managed XGBoost model training
+* Automated model evaluation
+* Enforcement of model quality thresholds
+* Controlled model registration
+* Manual approval before production deployment
+* Managed real-time inference through a SageMaker endpoint
+* Production monitoring and drift detection
+* A feedback loop for model retraining when drift is detected
 
----
 
 # 15. Model Registry and Governance
 
