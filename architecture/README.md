@@ -23,13 +23,13 @@ The architecture covers the complete machine learning lifecycle:
 
 The platform uses managed AWS services wherever practical to reduce infrastructure management while maintaining reproducibility, traceability, security, and operational control.
 
----
+
 
 ## 2. Architecture Diagram
 
 ![AWS Customer Churn MLOps Architecture](./AWS_Churn_MLOps.png)
 
----
+
 
 ## 3. Architecture Objectives
 
@@ -92,7 +92,7 @@ Training, pipeline execution, inference, infrastructure, and model behavior are 
 
 Managed services and workload-specific compute are used so infrastructure exists primarily when workloads are executing.
 
----
+
 
 # 4. High-Level Architecture
 
@@ -141,7 +141,7 @@ The platform consists of the following logical layers:
                                   Retraining
 ```
 
----
+
 
 # 5. End-to-End Architecture Flow
 
@@ -191,7 +191,6 @@ SageMaker Pipeline
             Retraining
 ```
 
----
 
 # 6. Data Architecture
 
@@ -223,7 +222,7 @@ Yes → Customer churned
 No  → Customer retained
 ```
 
----
+
 
 ## 6.2 Amazon S3 Storage
 
@@ -272,7 +271,7 @@ artifacts/<PipelineExecutionId>/evaluation/
 
 This prevents executions from overwriting one another and improves model lineage.
 
----
+
 
 # 7. Data Validation Layer
 
@@ -294,7 +293,7 @@ A failed validation prevents invalid data from progressing further into the ML p
 
 This provides an early control boundary between source data and downstream model development.
 
----
+
 
 # 8. Data Preprocessing Architecture
 
@@ -333,7 +332,7 @@ The preprocessing environment executes using a custom container stored in Amazon
 
 This ensures that preprocessing behavior is reproducible across pipeline executions.
 
----
+
 
 # 9. Container Architecture
 
@@ -363,7 +362,7 @@ Example:
 
 Pinning the container image to a digest ensures that a pipeline execution cannot silently receive a different container version because a mutable image tag was updated.
 
----
+
 
 # 10. Model Training Architecture
 
@@ -396,7 +395,7 @@ Training data is read from Amazon S3.
 
 After training completes, SageMaker packages the trained model artifact and writes it back to Amazon S3.
 
----
+
 
 # 11. Model Evaluation Architecture
 
@@ -434,7 +433,7 @@ artifacts/<PipelineExecutionId>/evaluation/
 
 This separates evaluation artifacts by pipeline execution and maintains traceability between a trained model and its corresponding evaluation results.
 
----
+
 
 # 12. Model Quality Gate
 
@@ -468,7 +467,7 @@ Only models satisfying all required quality criteria are eligible for registrati
 
 This prevents a technically successful training job from automatically becoming a production candidate when its predictive performance is inadequate.
 
----
+
 
 # 13. Model Performance
 
@@ -494,7 +493,7 @@ Final test performance:
 
 The model therefore satisfies the defined model quality thresholds.
 
----
+
 # 14. SageMaker Pipeline Architecture
 
 Amazon SageMaker Pipelines acts as the central orchestration service.
@@ -621,7 +620,7 @@ Deployment
 
 The registry therefore acts as the governance boundary between model development and production deployment.
 
----
+
 
 # 16. Approval Architecture
 
@@ -670,7 +669,7 @@ from:
 Production authorization
 ```
 
----
+
 
 # 17. Deployment Architecture
 
@@ -705,7 +704,7 @@ SageMaker manages:
 * Invocation handling
 * Scaling configuration
 
----
+
 
 # 18. Inference Architecture
 
@@ -742,7 +741,7 @@ The resulting prediction can support actions such as:
 
 The ML platform produces predictions, while downstream business systems determine the appropriate customer intervention.
 
----
+
 
 # 19. Deployment Strategies
 
@@ -774,7 +773,7 @@ The appropriate deployment strategy depends on:
 * Rollback requirements
 * Cost constraints
 
----
+
 
 # 20. Monitoring Architecture
 
@@ -786,7 +785,7 @@ The architecture therefore separates:
 2. Application monitoring
 3. Model monitoring
 
----
+
 
 ## 20.1 Infrastructure Monitoring
 
@@ -804,7 +803,7 @@ Amazon CloudWatch captures operational metrics such as:
 
 CloudWatch Logs centralizes logs from SageMaker workloads.
 
----
+
 
 ## 20.2 Application Monitoring
 
@@ -819,7 +818,7 @@ The inference layer should track:
 
 These metrics help distinguish model problems from application or infrastructure problems.
 
----
+
 
 ## 20.3 Model Monitoring
 
@@ -835,7 +834,7 @@ Monitoring can detect:
 
 Production observations are compared against a baseline established from training or validation data.
 
----
+
 
 # 21. Drift Detection and Retraining
 
@@ -893,7 +892,7 @@ A retrained model must still:
 * Receive approval
 * Pass deployment controls
 
----
+
 
 # 22. IAM Architecture
 
@@ -940,7 +939,7 @@ The developer or CI/CD identity receives `iam:PassRole` only for the specific Sa
 
 This prevents arbitrary role delegation.
 
----
+
 
 # 23. Security Architecture
 
@@ -997,7 +996,7 @@ Relevant controls include:
 * SageMaker execution history
 * Model Registry history
 
----
+
 
 # 24. Network Architecture
 
@@ -1038,7 +1037,7 @@ Private connectivity reduces dependence on public internet access.
 
 Security groups restrict network traffic according to workload requirements.
 
----
+
 
 # 25. Encryption Architecture
 
@@ -1064,7 +1063,7 @@ Inference requests to SageMaker endpoints are transmitted over HTTPS.
 
 Private service connectivity through VPC endpoints further reduces exposure to public network paths.
 
----
+
 
 # 26. Observability Architecture
 
@@ -1105,7 +1104,7 @@ SageMaker Model Monitor
 
 CloudWatch alarms can notify operations teams when defined thresholds are exceeded.
 
----
+
 
 # 27. Artifact Lineage
 
@@ -1151,7 +1150,7 @@ This supports questions such as:
 * Who approved the model?
 * Which model version is currently deployed?
 
----
+
 
 # 28. Scalability Architecture
 
@@ -1174,7 +1173,7 @@ Inference Compute
 
 to scale according to their own workload characteristics.
 
----
+
 
 # 29. Availability and Resilience
 
@@ -1194,7 +1193,7 @@ Production endpoint resilience can be increased through:
 
 The architecture avoids relying on local developer storage for production ML artifacts.
 
----
+
 
 # 30. Cost Architecture
 
@@ -1230,7 +1229,7 @@ For low-volume workloads, alternative inference strategies may be evaluated, inc
 
 The appropriate inference architecture should be selected according to latency, throughput, and availability requirements.
 
----
+
 
 # 31. Architecture Decisions
 
@@ -1274,7 +1273,7 @@ Managed inference reduces the operational overhead associated with building and 
 
 Infrastructure monitoring and model monitoring address different failure modes and are therefore both required in the production architecture.
 
----
+
 
 # 32. Separation of Responsibilities
 
@@ -1298,7 +1297,7 @@ The platform deliberately separates responsibilities across the ML lifecycle.
 
 This reduces coupling and provides clearer security and operational boundaries.
 
----
+
 
 # 33. Production MLOps Lifecycle
 
@@ -1369,7 +1368,7 @@ The final production lifecycle is:
                                   └──────────────► Validation
 ```
 
----
+
 
 # 34. Architecture Principles
 
@@ -1415,7 +1414,7 @@ Durable artifacts and managed infrastructure allow workloads to be reproduced or
 
 Compute is provisioned according to workload requirements instead of maintaining unnecessary always-on infrastructure.
 
----
+
 
 # 35. Final Architecture Summary
 
