@@ -265,7 +265,7 @@ The raw dataset is stored in Amazon S3 under:
 raw/telco/
 ```
 
----
+
 
 ## Data Validation
 
@@ -289,7 +289,7 @@ tenure = 0
 
 The validation stage ensures these data-quality conditions are explicitly detected rather than silently propagating invalid values through the pipeline.
 
----
+
 
 ## Machine Learning Approach
 
@@ -335,7 +335,7 @@ scale_pos_weight ≈ 2.769
 
 derived from the negative-to-positive class ratio in the training dataset.
 
----
+
 
 ## Model Evaluation
 
@@ -375,7 +375,7 @@ Recall is particularly important because a false negative represents a customer 
 
 These results provide the initial model baseline before further optimization.
 
----
+
 
 ## Automated Quality Gate
 
@@ -409,7 +409,7 @@ Conceptually:
 
 This prevents model promotion based purely on successful training.
 
----
+
 
 ## MLOps Pipeline
 
@@ -462,7 +462,7 @@ predictions.csv
 
 Reads the evaluation metrics using SageMaker Pipeline property files and determines whether model performance satisfies the promotion thresholds.
 
----
+
 
 ## Containerization
 
@@ -478,7 +478,7 @@ The pipeline references the container using a pinned image digest rather than re
 
 This improves reproducibility because the processing pipeline executes against a specific container image version.
 
----
+
 
 ## Amazon S3 Layout
 
@@ -503,7 +503,7 @@ s3://<project-bucket>/
 
 Pipeline execution IDs are incorporated into artifact paths to provide execution isolation and lineage between runs.
 
----
+
 
 ## Security
 
@@ -548,7 +548,7 @@ Further security controls are documented in:
 docs/security.md
 ```
 
----
+
 
 ## Monitoring
 
@@ -582,7 +582,7 @@ Monitoring design is documented in:
 docs/monitoring.md
 ```
 
----
+
 
 ## Cost Optimization
 
@@ -623,7 +623,7 @@ Additional analysis is maintained in:
 docs/cost-optimization.md
 ```
 
----
+
 
 ## Deployment Strategy
 
@@ -655,7 +655,7 @@ Model Registry integration and endpoint deployment have **not yet been implement
 
 The project will not represent these components as deployed until their implementation and validation are complete.
 
----
+
 
 ## Current SageMaker Deployment Status
 
@@ -689,7 +689,7 @@ This is currently being resolved by explicitly associating the SageMaker executi
 
 No SageMaker Pipeline execution is therefore represented as successfully completed yet.
 
----
+
 
 ## Testing
 
@@ -703,7 +703,7 @@ Current test result:
 
 This validates the local implementation before AWS pipeline execution.
 
----
+
 
 ## Project Structure
 
@@ -753,7 +753,7 @@ aws-customer-churn-mlops/
 
 The raw dataset is intentionally excluded from source control.
 
----
+
 
 ## Implementation
 
