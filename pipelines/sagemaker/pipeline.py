@@ -11,6 +11,7 @@ from sagemaker.mlops.workflow.pipeline import Pipeline
 from pipelines.sagemaker.parameters import (
     AWS_REGION,
     F1_THRESHOLD,
+    MODEL_APPROVAL_STATUS,
     PIPELINE_NAME,
     PROCESSING_INSTANCE_TYPE,
     RECALL_THRESHOLD,
@@ -22,6 +23,7 @@ from pipelines.sagemaker.steps import (
     EVALUATION_REPORT,
     create_evaluation_step,
     create_preprocessing_step,
+    create_register_model_step,
     create_training_step,
     create_validation_step,
 )
@@ -37,6 +39,7 @@ S3_BUCKET = "aws-customer-churn-mlops-633605692302-us-east-1"
 
 def create_quality_gate(
     evaluation_step,
+    register_model_step,
 ) -> ConditionStep:
     """Create the model quality gate."""
 
@@ -68,7 +71,7 @@ def create_quality_gate(
                 right=ROC_AUC_THRESHOLD,
             ),
         ],
-        if_steps=[],
+        if_steps=[register_model_step],
         else_steps=[],
     )
 
@@ -103,8 +106,16 @@ def create_pipeline(
         training_step=training_step,
     )
 
+    register_model_step = create_register_model_step(
+        role=role,
+        pipeline_session=pipeline_session,
+        training_step=training_step,
+        evaluation_step=evaluation_step,
+    )
+
     quality_gate = create_quality_gate(
         evaluation_step=evaluation_step,
+        register_model_step=register_model_step,
     )
 
     preprocessing_step.add_depends_on(
@@ -132,6 +143,7 @@ def create_pipeline(
             F1_THRESHOLD,
             RECALL_THRESHOLD,
             ROC_AUC_THRESHOLD,
+            MODEL_APPROVAL_STATUS,
         ],
         steps=[
             validation_step,

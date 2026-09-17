@@ -1,5 +1,6 @@
-"""SageMaker Pipeline processing and training steps."""
+"""SageMaker Pipeline processing, training, evaluation, and model steps."""
 
+from sagemaker.core.model_metrics import MetricsSource, ModelMetrics
 from sagemaker.core.processing import ScriptProcessor
 from sagemaker.core.shapes import (
     ProcessingInput,
@@ -9,15 +10,19 @@ from sagemaker.core.shapes import (
 )
 from sagemaker.core.workflow.pipeline_context import PipelineSession
 from sagemaker.core.workflow.properties import PropertyFile
+from sagemaker.mlops.workflow.model_step import ModelStep
 from sagemaker.mlops.workflow.steps import (
     ProcessingStep,
     TrainingStep,
 )
+from sagemaker.serve import ModelBuilder
 from sagemaker.train import ModelTrainer
 from sagemaker.train.configs import Compute, InputData
 
 from pipelines.sagemaker.parameters import (
     EVALUATION_ARTIFACTS_PREFIX,
+    MODEL_APPROVAL_STATUS,
+    MODEL_PACKAGE_GROUP_NAME,
     PREPROCESSING_ARTIFACTS_PREFIX,
     PROCESSING_IMAGE_URI,
     PROCESSING_INSTANCE_TYPE,
@@ -265,4 +270,55 @@ def create_evaluation_step(
         name="Evaluation",
         step_args=step_args,
         property_files=[EVALUATION_REPORT],
+    )
+
+
+def create_register_model_step(
+    role: str,
+    pipeline_session: PipelineSession,
+    training_step: TrainingStep,
+    evaluation_step: ProcessingStep,
+) -> ModelStep:
+    """Create the SageMaker Model Registry registration step."""
+
+    evaluation_s3_uri = (
+        evaluation_step
+        .properties
+        .ProcessingOutputConfig
+        .Outputs["evaluation"]
+        .S3Output
+        .S3Uri
+    )
+
+    model_metrics = ModelMetrics(
+        model_statistics=MetricsSource(
+            s3_uri=evaluation_s3_uri,
+            content_type="application/json",
+        )
+    )
+
+    model_builder = ModelBuilder(
+        s3_model_data_url=(
+            training_step
+            .properties
+            .ModelArtifacts
+            .S3ModelArtifacts
+        ),
+        image_uri=TRAINING_IMAGE_URI,
+        role_arn=role,
+        sagemaker_session=pipeline_session,
+    )
+
+    register_args = model_builder.register(
+        model_package_group_name=MODEL_PACKAGE_GROUP_NAME,
+        content_types=["text/csv"],
+        response_types=["text/csv"],
+        inference_instances=["ml.m5.large"],
+        approval_status=MODEL_APPROVAL_STATUS,
+        model_metrics=model_metrics,
+    )
+
+    return ModelStep(
+        name="RegisterModel",
+        step_args=register_args,
     )

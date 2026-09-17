@@ -137,3 +137,10 @@ XGBOOST_HYPERPARAMETERS = {
     "colsample_bytree": 0.8,
     "scale_pos_weight": SCALE_POS_WEIGHT,
 }
+
+MODEL_PACKAGE_GROUP_NAME = "aws-customer-churn-xgboost"
+
+MODEL_APPROVAL_STATUS = ParameterString(
+    name="ModelApprovalStatus",
+    default_value="PendingManualApproval",
+)
